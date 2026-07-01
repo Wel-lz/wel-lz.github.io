@@ -184,12 +184,18 @@
     function requestJSON(url, post, success, error) {
         var net = new Lampa.Reguest();
         net.timeout(15000);
-        net.silent(url, function (json) {
-            success(json);
+        // dataType:'text' — забираем сырьё и парсим JSON сами. Так колбэк ошибки
+        // срабатывает ТОЛЬКО на реальный сетевой/HTTP-сбой, а не на «200, но не
+        // JSON» (например, когда HDREZKA на повторный /ajax/login/ отдаёт HTML).
+        net.silent(url, function (text) {
+            var json = null;
+            try { json = (typeof text === 'string') ? JSON.parse(text) : text; }
+            catch (e) { json = null; }
+            success(json, text);
         }, function (xhr, status) {
             error((xhr && xhr.status) || 0, status);
         }, post, {
-            dataType: 'json',
+            dataType: 'text',
             headers: buildHeaders({ 'Content-Type': 'application/x-www-form-urlencoded' })
         });
         return net;
@@ -204,24 +210,24 @@
                    '&login_password=' + encodeURIComponent(password) +
                    '&login_not_save=0';
 
-        requestJSON(url, post, function (json) {
+        requestJSON(url, post, function (json, raw) {
             if (json && json.success) {
-                // В браузере Set-Cookie кросс-доменно недоступен — сессию держит
-                // cookie-jar сетевого слоя Lampa. На нативных сборках, где кука
-                // всё же видна, дополнительно забираем dle_* из document.cookie.
-                var dle = '';
-                try {
-                    dle = (document.cookie || '').split(';').map(function (s) { return s.trim(); })
-                        .filter(function (s) { return /^dle_(user_id|password|hash|forum_sessions)=/.test(s); })
-                        .join('; ');
-                } catch (e) {}
-                Lampa.Storage.set(STORAGE.cookie, dle);
+                // Сессию держит cookie-jar прокси, поэтому куку из document.cookie
+                // тащить не нужно — ставим маркер, чтобы isLoggedIn() был true.
+                Lampa.Storage.set(STORAGE.cookie, 'proxy-session');
                 Lampa.Storage.set(STORAGE.status, 'logged');
                 cb(true, 'Успешный вход');
-            } else {
-                var msg = (json && json.message) || 'Не удалось войти';
+            } else if (json && typeof json.success !== 'undefined') {
+                // Валидный JSON, но success:false — неверный логин/пароль и т.п.
+                var msg = json.message || 'Не удалось войти';
                 Lampa.Storage.set(STORAGE.status, 'error:' + msg);
                 cb(false, msg);
+            } else {
+                // 200, но ответ не JSON. Обычно это значит «вы уже авторизованы»
+                // (сервер отдал HTML). Считаем вход уже выполненным.
+                Lampa.Storage.set(STORAGE.cookie, 'proxy-session');
+                Lampa.Storage.set(STORAGE.status, 'logged');
+                cb(true, 'Уже авторизованы (сессия активна)');
             }
         }, function (code) {
             Lampa.Storage.set(STORAGE.status, 'error:network');
