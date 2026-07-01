@@ -226,7 +226,13 @@
             };
             xhr.onerror = function () {
                 Lampa.Storage.set(STORAGE.status, 'error:network');
-                cb(false, 'Сетевая ошибка при авторизации' + '\n' + xhr);
+                cb(false,
+                    'Сетевая ошибка при авторизации\n' +
+                    'status: ' + xhr.status + '\n' +
+                    'statusText: ' + xhr.statusText + '\n' +
+                    'readyState: ' + xhr.readyState + '\n' +
+                    'response: ' + xhr.responseText
+                );
             };
             xhr.ontimeout = function () {
                 Lampa.Storage.set(STORAGE.status, 'error:timeout');
