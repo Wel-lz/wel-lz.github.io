@@ -173,6 +173,28 @@
         return network;
     }
 
+    /**
+     * POST-запрос через сетевой слой Lampa (Lampa.Reguest) с JSON-ответом.
+     * В отличие от голого XMLHttpRequest, запрос идёт через механизм приложения,
+     * который на desktop/нативных сборках обходит CORS (и, при желании, уходит
+     * через встроенный прокси Lampa). Заголовки Cookie/UA/Referer в браузере
+     * игнорируются, но на нативном слое учитываются, а сессия поддерживается
+     * собственным cookie-jar приложения — вручную её тащить не нужно.
+     */
+    function requestJSON(url, post, success, error) {
+        var net = new Lampa.Reguest();
+        net.timeout(15000);
+        net.silent(url, function (json) {
+            success(json);
+        }, function (xhr, status) {
+            error((xhr && xhr.status) || 0, status);
+        }, post, {
+            dataType: 'json',
+            headers: buildHeaders({ 'Content-Type': 'application/x-www-form-urlencoded' })
+        });
+        return net;
+    }
+
     /* ====================================================
      *  Auth: login to HDREZKA
      * ==================================================== */
@@ -182,66 +204,29 @@
                    '&login_password=' + encodeURIComponent(password) +
                    '&login_not_save=0';
 
-        var net = new Lampa.Reguest();
-        net.timeout(15000);
-
-        // We need raw response WITH Set-Cookie. Lampa.Reguest does not always
-        // expose headers, so we fall back to XHR directly.
-        try {
-            var xhr = new XMLHttpRequest();
-            xhr.open('POST', url, true);
-            xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
-            xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
-            xhr.setRequestHeader('Referer', getDomain() + '/');
-            xhr.withCredentials = true;
-            xhr.timeout = 15000;
-            xhr.onload = function () {
-                var ok = false, msg = '';
+        requestJSON(url, post, function (json) {
+            if (json && json.success) {
+                // В браузере Set-Cookie кросс-доменно недоступен — сессию держит
+                // cookie-jar сетевого слоя Lampa. На нативных сборках, где кука
+                // всё же видна, дополнительно забираем dle_* из document.cookie.
+                var dle = '';
                 try {
-                    var json = JSON.parse(xhr.responseText);
-                    ok = !!json.success;
-                    msg = json.message || '';
-                } catch (e) { msg = 'Некорректный ответ сервера'; }
-
-                if (ok) {
-                    // Try to read Set-Cookie. In a browser this is blocked;
-                    // we therefore read document.cookie which the server set
-                    // (the request was same-origin via the proxy / direct).
-                    var cookieStr = '';
-                    try {
-                        cookieStr = document.cookie || '';
-                    } catch (e) {}
-                    // Filter to dle_* cookies only
-                    var dle = cookieStr.split(';').map(function (s) { return s.trim(); })
+                    dle = (document.cookie || '').split(';').map(function (s) { return s.trim(); })
                         .filter(function (s) { return /^dle_(user_id|password|hash|forum_sessions)=/.test(s); })
                         .join('; ');
-
-                    Lampa.Storage.set(STORAGE.cookie, dle);
-                    Lampa.Storage.set(STORAGE.status, 'logged');
-                    cb(true, 'Успешный вход');
-                } else {
-                    Lampa.Storage.set(STORAGE.status, 'error:' + (msg || 'login failed'));
-                    cb(false, msg || 'Не удалось войти');
-                }
-            };
-            xhr.onerror = function () {
-                Lampa.Storage.set(STORAGE.status, 'error:network');
-                cb(false,
-                    'Сетевая ошибка при авторизации\n' +
-                    'status: ' + xhr.status + '\n' +
-                    'statusText: ' + xhr.statusText + '\n' +
-                    'readyState: ' + xhr.readyState + '\n' +
-                    'response: ' + xhr.responseText
-                );
-            };
-            xhr.ontimeout = function () {
-                Lampa.Storage.set(STORAGE.status, 'error:timeout');
-                cb(false, 'Превышено время ожидания');
-            };
-            xhr.send(post);
-        } catch (e) {
-            cb(false, 'Ошибка: ' + e.message);
-        }
+                } catch (e) {}
+                Lampa.Storage.set(STORAGE.cookie, dle);
+                Lampa.Storage.set(STORAGE.status, 'logged');
+                cb(true, 'Успешный вход');
+            } else {
+                var msg = (json && json.message) || 'Не удалось войти';
+                Lampa.Storage.set(STORAGE.status, 'error:' + msg);
+                cb(false, msg);
+            }
+        }, function (code) {
+            Lampa.Storage.set(STORAGE.status, 'error:network');
+            cb(false, 'Сетевая ошибка при авторизации (код ' + code + ')');
+        });
     }
 
     function logout() {
@@ -402,39 +387,24 @@
                    '&action=get_movie';
         }
 
-        try {
-            var xhr = new XMLHttpRequest();
-            xhr.open('POST', url, true);
-            xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
-            xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
-            xhr.setRequestHeader('Referer', getDomain() + '/');
-            xhr.withCredentials = true;
-            xhr.timeout = 15000;
-            xhr.onload = function () {
-                try {
-                    var json = JSON.parse(xhr.responseText);
-                    if (!json.success) { err && err(json.message || 'Сервер вернул ошибку'); return; }
-                    var decoded = decodeTrash(json.url);
-                    var items = parsePlaylist(decoded);
-                    if (!items.length) { err && err('Пустой плейлист'); return; }
-                    var qualities = {};
-                    items.forEach(function (it) { qualities[it.label] = it.file; });
-                    if (json.premium_content) {
-                        // premium URLs are dummies for free accounts
-                        // but we still try to play in case the user has premium
-                    }
-                    cb({
-                        title: '',
-                        file: items[items.length - 1].file, // best (last)
-                        quality: qualities,
-                        subtitles: parseSubtitles(json.subtitle)
-                    });
-                } catch (e) { err && err('Не удалось разобрать ответ'); }
-            };
-            xhr.onerror = function () { err && err('Сетевая ошибка'); };
-            xhr.ontimeout = function () { err && err('Таймаут'); };
-            xhr.send(post);
-        } catch (e) { err && err(e.message); }
+        requestJSON(url, post, function (json) {
+            if (!json || !json.success) { err && err((json && json.message) || 'Сервер вернул ошибку'); return; }
+            var decoded = decodeTrash(json.url);
+            var items = parsePlaylist(decoded);
+            if (!items.length) { err && err('Пустой плейлист'); return; }
+            var qualities = {};
+            items.forEach(function (it) { qualities[it.label] = it.file; });
+            // premium_content: для бесплатных аккаунтов ссылки-заглушки, но всё
+            // равно пробуем воспроизвести — вдруг у пользователя есть премиум.
+            cb({
+                title: '',
+                file: items[items.length - 1].file, // best (last)
+                quality: qualities,
+                subtitles: parseSubtitles(json.subtitle)
+            });
+        }, function (code) {
+            err && err('Сетевая ошибка (код ' + code + ')');
+        });
     }
 
     function parseSubtitles(s) {
