@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg data-dc-tpl="72" viewBox="0 0 512 512" width="512" height="512" xmlns="http://www.w3.org/2000/svg" data-om-id="6ca8bb9c:76">
+  <defs data-dc-tpl="73" data-om-id="6ca8bb9c:77">
+    <linearGradient data-dc-tpl="74" id="avatarGrad" x1="120" y1="150" x2="392" y2="362" gradientUnits="userSpaceOnUse" data-om-id="6ca8bb9c:78">
+      <stop data-dc-tpl="75" offset="0" stop-color="#f6b23e" data-om-id="6ca8bb9c:79"/>
+      <stop data-dc-tpl="76" offset="1" stop-color="#d9660c" data-om-id="6ca8bb9c:80"/>
+    </linearGradient>
+    <linearGradient data-dc-tpl="77" id="avatarDarkGrad" x1="0" y1="0" x2="512" y2="512" gradientUnits="userSpaceOnUse" data-om-id="6ca8bb9c:81">
+      <stop data-dc-tpl="78" offset="0" stop-color="#42300f" data-om-id="6ca8bb9c:82"/>
+      <stop data-dc-tpl="79" offset="0.55" stop-color="#221807" data-om-id="6ca8bb9c:83"/>
+      <stop data-dc-tpl="80" offset="1" stop-color="#080604" data-om-id="6ca8bb9c:84"/>
+    </linearGradient>
+    <pattern data-dc-tpl="81" id="avatarStripes" width="16" height="16" patternTransform="rotate(45)" patternUnits="userSpaceOnUse" data-om-id="6ca8bb9c:85">
+      <rect data-dc-tpl="82" width="16" height="16" fill="none" data-om-id="6ca8bb9c:86"/>
+      <line data-dc-tpl="83" x1="0" y1="0" x2="0" y2="16" stroke="#eb9a2e" stroke-width="3" opacity="0.16" data-om-id="6ca8bb9c:87"/>
+    </pattern>
+  </defs>
+  <rect data-dc-tpl="84" width="512" height="512" fill="#16130f" data-om-id="6ca8bb9c:88"/> 
+    <g data-dc-tpl="86" fill="url(#avatarGrad)" data-om-id="6ca8bb9c:90">
+      <rect data-dc-tpl="87" x="108" y="211" width="40" height="90" rx="20" data-om-id="6ca8bb9c:91"/>
+      <rect data-dc-tpl="88" x="172" y="166" width="40" height="180" rx="20" data-om-id="6ca8bb9c:92"/>
+      <rect data-dc-tpl="89" x="236" y="106" width="40" height="300" rx="20" data-om-id="6ca8bb9c:93"/>
+      <rect data-dc-tpl="90" x="300" y="186" width="40" height="140" rx="20" data-om-id="6ca8bb9c:94"/>
+      <rect data-dc-tpl="91" x="364" y="141" width="40" height="230" rx="20" data-om-id="6ca8bb9c:95"/>
+    </g>
+</svg>
