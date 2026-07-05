@@ -15,7 +15,7 @@
       <line data-dc-tpl="83" x1="0" y1="0" x2="0" y2="16" stroke="#eb9a2e" stroke-width="3" opacity="0.16" data-om-id="6ca8bb9c:87"/>
     </pattern>
   </defs>
-  <rect data-dc-tpl="84" width="512" height="512" fill="#16130f" data-om-id="6ca8bb9c:88"/> 
+  <rect data-dc-tpl="84" width="512" height="512" fill="transparent" data-om-id="6ca8bb9c:88"/> 
     <g data-dc-tpl="86" fill="url(#avatarGrad)" data-om-id="6ca8bb9c:90">
       <rect data-dc-tpl="87" x="108" y="211" width="40" height="90" rx="20" data-om-id="6ca8bb9c:91"/>
       <rect data-dc-tpl="88" x="172" y="166" width="40" height="180" rx="20" data-om-id="6ca8bb9c:92"/>
